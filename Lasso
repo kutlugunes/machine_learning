@@ -1,0 +1,44 @@
+
+train_data1 = csvread( 'Positive RF - Pre+Post - tones(Zscore) ALL (n4).csv' )
+train_data = train_data1(2000:5000,:);
+train_data = train_data';
+
+test_data = csvread( 'Pre vs. Post-Training Sucrose NPs.csv' )
+
+X = train_data;
+y = test_data;
+
+%X = data(:,1:1);
+%y = data(:,2);
+
+%Split the data into training and test sets.
+n = length(y);
+c = cvpartition(n,'HoldOut',0.5);
+
+idxTrain = training(c,1);
+idxTest = ~idxTrain;
+XTrain = X(idxTrain,:);
+yTrain = y(idxTrain);
+XTest = X(idxTest,:);
+yTest = y(idxTest);
+
+%Find the coefficients of a regularized linear regression model using 10-fold cross-validation 
+%and the elastic net method with Alpha = 0.75. Use the largest Lambda value
+%such that the mean squared error (MSE) is within one standard error of the minimum MSE.
+%The value Alpha = 1 represents lasso regression, Alpha close to 0 approaches ridge regression, 
+%and other values represent elastic net optimization. See Elastic Net.
+%[B,FitInfo] = lasso(XTrain,yTrain,'Alpha',0.75,'CV',10);
+[B,FitInfo] = lasso(XTrain,yTrain,'Alpha',0.2,'CV',40);
+idxLambda1SE = FitInfo.Index1SE;
+coef = B(:,idxLambda1SE);
+coef0 = FitInfo.Intercept(idxLambda1SE);
+
+%Predict scores for the test data. 
+%Compare the predicted values to the actual data using a reference line.
+yhat = XTest*coef + coef0;
+hold on
+scatter(yTest,yhat)
+plot(yTest,yTest)
+xlabel('Actual Signal')
+ylabel('Predicted Signal')
+hold off
